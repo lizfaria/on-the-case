@@ -213,7 +213,6 @@ app.events = function() {
             $(this).text("Show List Results");
             app.accordianDisplay = true;
         }
-
     });
 }
 
