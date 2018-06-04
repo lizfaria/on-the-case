@@ -10,7 +10,7 @@ app.getCoordinates = function (search) {
         },
     })
     .then((res) => {
-        console.log(res);
+        //console.log(res);
         const latitude = res.results[0].geometry.location.lat;
         const longitude = res.results[0].geometry.location.lng;
         const location = res.results[0].formatted_address;
@@ -23,7 +23,7 @@ app.getCoordinates = function (search) {
 app.getWashroomsByCoords = function (latitude, longitude) {
     const unisexVal = $('#unisex').prop('checked');
     const accessibleVal = $('#accessible').prop('checked');
-    console.log(`Unisex: ${unisexVal}; Accessible: ${accessibleVal}`);
+    //console.log(`Unisex: ${unisexVal}; Accessible: ${accessibleVal}`);
 
 
     $.ajax({
@@ -46,7 +46,7 @@ app.getWashroomsByCoords = function (latitude, longitude) {
 app.myMap;
 
 
-app.initMap = function(latitude, longitude, location) {
+app.initMap = function(latitude, longitude, location, id) {
     app.myMap = new google.maps.Map(document.getElementById('map'), {
         center: { lat: latitude,lng: longitude },
         zoom: 16,
@@ -75,9 +75,29 @@ app.addInitialMarker = function(latitude, longitude, location) {
 });
 };
 
-app.addMarker = function(latitude, longitude, location, address) {
+app.markers = [];
+
+app.openMarker = function(id) {
+    console.log(id);
+
+    let match = {};
+
+    for (let i = 0; i < app.markers.length; i++) {
+        console.log(app.markers[i].markerId);
+        if (app.markers[i].markerId === id) {
+            match = app.markers[i];
+        }
+    }
+
+    console.log(match);
+    app.markers.map((marker) => { marker.infoWindow.close() });
+    match.infoWindow.open(app.myMap, match);
+}
+
+app.addMarker = function(latitude, longitude, location, address, id) {
 
     let marker = new google.maps.Marker({
+        markerId: id,
         position: { lat: latitude, lng: longitude },
         map: app.myMap,
         icon: {
@@ -94,10 +114,26 @@ app.addMarker = function(latitude, longitude, location, address) {
     let infoWindow = new google.maps.InfoWindow({
         content: infoWindowContent
     });
+    
+    marker.infoWindow = infoWindow;
 
     marker.addListener('click', function() {
+        app.markers.map((marker) => { marker.infoWindow.close() });
         infoWindow.open(map, marker);    
     })
+
+
+    app.markers.push(marker);
+   // console.log(app.markers);
+    //console.log(marker);
+
+    // go through and close any markers that are open
+    // put in array of markers that you can loop through eventually
+    // create app.markers array
+    // marker is an object
+    // create a function that loops through all markers and closes them
+    // iterate through array and look for ID
+    // put infoWindow and marker together in object
 
 }
 
@@ -110,12 +146,15 @@ function titleCase(str) {
 
 app.displayWashroom = function(washrooms) {
     $('#washrooms').empty();
-    console.log(washrooms);
+    //console.log(washrooms);
 
     _.uniq(washrooms,(washroom) => washroom.street.split(' ').splice(0,2).join(' ').toLowerCase()).forEach((washroom) => {
-        const $name = $('<h2>').text(titleCase(washroom.name));
+        const $name = $(`<h2 class='place-name'>`).text(titleCase(washroom.name));
+        $name.on('click', function() {
+            app.openMarker(washroom.id);
+        });
         const streetAddress = washroom.street.trim();
-        app.addMarker(washroom.latitude, washroom.longitude, washroom.name, streetAddress);
+        app.addMarker(washroom.latitude, washroom.longitude, washroom.name, streetAddress, washroom.id);
     
         const city = washroom.city.trim();
 
@@ -124,7 +163,7 @@ app.displayWashroom = function(washrooms) {
         const washroomLong = washroom.longitude;
         // const mapURL = `https://www.google.com/maps/search/?api=1&query=${washroomLat},${washroomLong}`;
         const mapURL = `https://www.google.com/maps/search/?api=1&query=${streetAddress}+${city}`;
-        const $address = $('<p>').html(`<a href="${mapURL}" target="_blank">${titleCase(streetAddress)}, ${city}</a>`);
+        const $address = $('<p>').html(`${titleCase(streetAddress)}, ${city}`);
 
         const $washroomInnerContent = $('<div class="washroom-inner-content">');
         $washroomInnerContent.append($name, $address);
